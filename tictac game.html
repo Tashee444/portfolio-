@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Tic Tac Toe</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #1a1a1a;
+            font-family: 'Press Start 2P', cursive;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-container {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            padding: 2rem;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 20px;
+            box-shadow: 0 0 50px rgba(81, 203, 238, 0.3);
+            border: 2px solid #51cbee;
+        }
+
+        h1 {
+            color: #51cbee;
+            text-shadow: 0 0 10px rgba(81, 203, 238, 0.5);
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 2rem 0;
+            position: relative;
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid #51cbee;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            color: #ff4754;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cell:hover {
+            background: rgba(81, 203, 238, 0.1);
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(81, 203, 238, 0.3);
+        }
+
+        .cell.x::before {
+            content: 'X';
+            text-shadow: 0 0 20px #ff4754;
+            animation: popIn 0.3s ease;
+        }
+
+        .cell.o::before {
+            content: 'O';
+            color: #51cbee;
+            text-shadow: 0 0 20px #51cbee;
+            animation: popIn 0.3s ease;
+        }
+
+        .status {
+            color: #51cbee;
+            font-size: 1.2rem;
+            margin: 1rem 0;
+            text-shadow: 0 0 10px rgba(81, 203, 238, 0.5);
+        }
+
+        .reset-btn {
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            background: linear-gradient(45deg, #ff4754, #51cbee);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .reset-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(81, 203, 238, 0.5);
+        }
+
+        .reset-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                transparent
+            );
+            transition: 0.5s;
+        }
+
+        .reset-btn:hover::before {
+            left: 100%;
+        }
+
+        .winning-cell {
+            background: rgba(81, 203, 238, 0.2);
+            animation: winGlow 1s infinite;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); }
+            90% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes winGlow {
+            0%, 100% { box-shadow: 0 0 10px #51cbee; }
+            50% { box-shadow: 0 0 30px #51cbee; }
+        }
+
+        .particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .particle {
+            position: absolute;
+            background: radial-gradient(circle, #51cbee, transparent);
+            border-radius: 50%;
+            animation: float 3s infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0) scale(0); opacity: 1; }
+            100% { transform: translateY(-100vh) scale(1); opacity: 0; }
+        }
+
+        @media (max-width: 600px) {
+            .cell {
+                width: 80px;
+                height: 80px;
+                font-size: 3rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+    <div class="game-container">
+        <h1>NEON TIC TAC TOE</h1>
+        <div class="status" id="status">PLAYER X'S TURN</div>
+        <div class="board" id="board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+        <button class="reset-btn" id="resetBtn">NEW GAME</button>
+    </div>
+
+    <script>
+        const cells = document.querySelectorAll('.cell');
+        const status = document.getElementById('status');
+        const resetBtn = document.getElementById('resetBtn');
+        const particles = document.getElementById('particles');
+        let currentPlayer = 'X';
+        let gameBoard = ['', '', '', '', '', '', '', '', ''];
+        let gameActive = true;
+
+        const winningCombinations = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+            [0, 4, 8], [2, 4, 6] // Diagonals
+        ];
+
+        function createParticles(x, y) {
+            for (let i = 0; i < 10; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                particle.style.width = Math.random() * 20 + 5 + 'px';
+                particle.style.height = particle.style.width;
+                particle.style.animation = `float ${Math.random() * 2 + 1}s linear`;
+                particles.appendChild(particle);
+                
+                setTimeout(() => particle.remove(), 3000);
+            }
+        }
+
+        function handleCellClick(e) {
+            const cell = e.target;
+            const index = parseInt(cell.dataset.index);
+
+            if (gameBoard[index] !== '' || !gameActive) return;
+
+            gameBoard[index] = currentPlayer;
+            cell.classList.add(currentPlayer.toLowerCase());
+            createParticles(e.clientX, e.clientY);
+
+            if (checkWin()) {
+                status.textContent = `PLAYER ${currentPlayer} WINS!`;
+                gameActive = false;
+                highlightWinningCombination();
+                return;
+            }
+
+            if (checkDraw()) {
+                status.textContent = "GAME DRAW!";
+                gameActive = false;
+                return;
+            }
+
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            status.textContent = `PLAYER ${currentPlayer}'S TURN`;
+        }
+
+        function checkWin() {
+            return winningCombinations.some(combination => {
+                return combination.every(index => {
+                    return gameBoard[index] === currentPlayer;
+                });
+            });
+        }
+
+        function checkDraw() {
+            return gameBoard.every(cell => cell !== '');
+        }
+
+        function highlightWinningCombination() {
+            winningCombinations.forEach(combination => {
+                if (combination.every(index => gameBoard[index] === currentPlayer)) {
+                    combination.forEach(index => {
+                        cells[index].classList.add('winning-cell');
+                    });
+                }
+            });
+        }
+
+        function resetGame() {
+            gameBoard = ['', '', '', '', '', '', '', '', ''];
+            gameActive = true;
+            currentPlayer = 'X';
+            status.textContent = `PLAYER ${currentPlayer}'S TURN`;
+            cells.forEach(cell => {
+                cell.className = 'cell';
+            });
+        }
+
+        // Event Listeners
+        cells.forEach(cell => cell.addEventListener('click', handleCellClick));
+        resetBtn.addEventListener('click', resetGame);
+    </script>
+</body>
+</html>
