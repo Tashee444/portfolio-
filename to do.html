@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MY Task Pro</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #a855f7;
+            --accent: #ec4899;
+            --dark: #1e293b;
+            --light: #f8fafc;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            min-height: 100vh;
+            color: var(--light);
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            right: 0;
+            top: 0;
+            background: none;
+            border: none;
+            color: var(--light);
+            cursor: pointer;
+            font-size: 1.5rem;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .task-input {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--light);
+            font-size: 1rem;
+        }
+
+        .datetime-input {
+            width: 200px;
+            padding: 1rem;
+            border: none;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--light);
+        }
+
+        .add-btn {
+            padding: 1rem 2rem;
+            background: var(--accent);
+            border: none;
+            border-radius: 12px;
+            color: var(--light);
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .add-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+
+        .task-list {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 1rem;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            transition: transform 0.3s;
+        }
+
+        .task-item:hover {
+            transform: translateX(10px);
+        }
+
+        .task-content {
+            flex: 1;
+            margin: 0 1rem;
+        }
+
+        .task-date {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .action-btn {
+            padding: 0.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--light);
+            transition: background 0.3s;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .calendar {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 1rem;
+        }
+
+        .notification-panel {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 1rem;
+            border-radius: 12px;
+            max-width: 300px;
+        }
+
+        .dark-mode {
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            color: var(--light);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>MY Task Pro</h1>
+            <button class="theme-toggle" id="themeToggle"><i class="fas fa-moon"></i></button>
+        </div>
+
+        <div class="input-group">
+            <input type="text" class="task-input" id="taskInput" placeholder="New task...">
+            <input type="datetime-local" class="datetime-input" id="taskDateTime">
+            <button class="add-btn" id="addBtn"><i class="fas fa-plus"></i> Add Task</button>
+        </div>
+
+        <div class="main-content">
+            <div class="task-list" id="taskList">
+                <!-- Tasks will be added here -->
+            </div>
+
+            <div class="calendar">
+                <h2>Schedule</h2>
+                <div id="calendarView"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification-panel" id="notificationPanel"></div>
+
+    <script>
+        // Initialize state
+        let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+        let darkMode = localStorage.getItem('darkMode') === 'true';
+
+        // DOM elements
+        const themeToggle = document.getElementById('themeToggle');
+        const taskInput = document.getElementById('taskInput');
+        const taskDateTime = document.getElementById('taskDateTime');
+        const addBtn = document.getElementById('addBtn');
+        const taskList = document.getElementById('taskList');
+        const notificationPanel = document.getElementById('notificationPanel');
+
+        // Notification sound
+        const notificationSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+
+        // Generate unique ID
+        const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
+
+        // Save to localStorage
+        const saveTasks = () => {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        };
+
+        // Create task element
+        const createTaskElement = (task) => {
+            const taskElement = document.createElement('div');
+            taskElement.className = 'task-item';
+            taskElement.dataset.id = task.id;
+
+            taskElement.innerHTML = `
+                <input type="checkbox" ${task.completed ? 'checked' : ''}>
+                <div class="task-content">
+                    <div>${task.text}</div>
+                    <div class="task-date">${new Date(task.dateTime).toLocaleString()}</div>
+                </div>
+                <div class="task-actions">
+                    <button class="action-btn edit-btn"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn delete-btn"><i class="fas fa-trash"></i></button>
+                </div>
+            `;
+
+            // Add event listeners
+            taskElement.querySelector('input[type="checkbox"]').addEventListener('change', () => {
+                task.completed = !task.completed;
+                taskElement.classList.toggle('completed');
+                saveTasks();
+            });
+
+            taskElement.querySelector('.edit-btn').addEventListener('click', () => {
+                const newText = prompt('Edit task:', task.text);
+                if (newText) {
+                    task.text = newText;
+                    taskElement.querySelector('.task-content div').textContent = newText;
+                    saveTasks();
+                }
+            });
+
+            taskElement.querySelector('.delete-btn').addEventListener('click', () => {
+                tasks = tasks.filter(t => t.id !== task.id);
+                taskElement.remove();
+                saveTasks();
+            });
+
+            return taskElement;
+        };
+
+        // Schedule notifications
+        const scheduleNotifications = (task) => {
+            const timeDifference = new Date(task.dateTime) - Date.now();
+            
+            if (timeDifference > 0) {
+                setTimeout(() => {
+                    showNotification(`Task Due: ${task.text}`);
+                    notificationSound.play();
+                    
+                    if (Notification.permission === 'granted') {
+                        new Notification('Task Reminder', {
+                            body: task.text
+                        });
+                    }
+                }, timeDifference);
+            }
+        };
+
+        // Show visual notification
+        const showNotification = (message) => {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            notificationPanel.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 10000);
+        };
+
+        // Add new task
+        const addTask = (text, dateTime) => {
+            if (text.trim()) {
+                const newTask = {
+                    id: generateId(),
+                    text: text.trim(),
+                    dateTime: dateTime || new Date(),
+                    completed: false
+                };
+
+                tasks.push(newTask);
+                const taskElement = createTaskElement(newTask);
+                taskList.appendChild(taskElement);
+                scheduleNotifications(newTask);
+                saveTasks();
+                taskInput.value = '';
+                taskDateTime.value = '';
+            }
+        };
+
+        // Theme toggle
+        themeToggle.addEventListener('click', () => {
+            darkMode = !darkMode;
+            document.body.classList.toggle('dark-mode', darkMode);
+            localStorage.setItem('darkMode', darkMode);
+            themeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        });
+
+        // Initial setup
+        document.body.classList.toggle('dark-mode', darkMode);
+        themeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        tasks.forEach(task => taskList.appendChild(createTaskElement(task)));
+        tasks.forEach(scheduleNotifications);
+
+        // Event listeners
+        addBtn.addEventListener('click', () => addTask(taskInput.value, taskDateTime.value));
+        taskInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addTask(taskInput.value, taskDateTime.value);
+        });
+
+        // Request notification permission
+        if (Notification.permission !== 'granted') {
+            Notification.requestPermission();
+        }
+    </script>
+</body>
+</html>
